@@ -1,6 +1,9 @@
 import keys
+import ephem
+import time
 from iso import iso
 import logging
+from pprint import pprint
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 
@@ -12,6 +15,35 @@ def greet_user(bot, update):
     all_terms = ', \n'.join(lst_terms)
     update.message.reply_text(all_terms)
 
+
+def planet_today(bot, update):
+    user_text = update.message.text
+    print(user_text)
+    planet = user_text.split()[1]
+    today = time.strftime('%Y/%m/%d')
+    if planet == 'Mercury':
+        today_in = ephem.constellation(ephem.Mercury(today))
+    elif planet == 'Venus':
+        today_in = ephem.constellation(ephem.Venus(today))
+    elif planet == 'Earth':
+        update.message.reply_text('No-no-no, try something different')
+    elif planet == 'Mars':
+        today_in = ephem.constellation(ephem.Mars(today))
+    elif planet == 'Jupiter':
+        today_in = ephem.constellation(ephem.Jupiter(today))
+    elif planet == 'Saturn':
+        today_in = ephem.constellation(ephem.Saturn(today))
+    elif planet == 'Uranus':
+        today_in = ephem.constellation(ephem.Uranus(today))
+    elif planet == 'Neptune':
+        today_in = ephem.constellation(ephem.Neptune(today))
+    elif planet == 'Pluto':
+        today_in = ephem.constellation(ephem.Pluto(today))
+    else:
+        update.message.reply_text('There\'s no such planet (respect planets and write them with capital letter!)')
+
+    answer = today_in[1]
+    update.message.reply_text('Today {} is in {}'.format(planet, answer))
 
 def talk_to_me(bot, update):
     user_text = update.message.text.lower()
@@ -42,6 +74,7 @@ def main():
 
     dp = updater.dispatcher
     dp.add_handler(CommandHandler('start', greet_user))
+    dp.add_handler(CommandHandler('planet', planet_today))
     dp.add_handler(MessageHandler(Filters.text, talk_to_me))
 
     updater.start_polling()
