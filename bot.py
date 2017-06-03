@@ -3,12 +3,18 @@ import ephem
 import time
 from iso import iso
 import logging
-from pprint import pprint
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 
+def get_user_name(update):
+    user_name = update.message.chat.first_name + ' ' + update.message.chat.last_name
+    return user_name
+
+
 def greet_user(bot, update):
-    print('Called /start')
+    user_name = get_user_name(update)
+    print('{} called /start'.format(user_name))
+    logging.info('{} called /start'.format(user_name))
     lst_terms = []
     for d_key in iso:
         lst_terms.append(d_key)
@@ -17,8 +23,9 @@ def greet_user(bot, update):
 
 
 def planet_today(bot, update):
+    user_name = get_user_name(update)
     user_text = update.message.text
-    print(user_text)
+    print('{} wrote {}'.format(user_name, user_text))
     planet = user_text.split()[1]
     today = time.strftime('%Y/%m/%d')
     if planet == 'Mercury':
@@ -45,9 +52,11 @@ def planet_today(bot, update):
     answer = today_in[1]
     update.message.reply_text('Today {} is in {}'.format(planet, answer))
 
+
 def talk_to_me(bot, update):
+    user_name = get_user_name(update)
     user_text = update.message.text.lower()
-    print(user_text)
+    print('{} wrote {}'.format(user_name, user_text))
     possible_keys = []
     for d_key in iso:
         if user_text in d_key:
@@ -63,7 +72,7 @@ def talk_to_me(bot, update):
     update.message.reply_text(reply)
 
 
-logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s',
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
                     level=logging.INFO,
                     filename='bot.log'
                     )
@@ -80,4 +89,6 @@ def main():
     updater.start_polling()
     updater.idle()
 
-main()
+if __name__ == '__main__':
+    logging.info('Bot started')
+    main()
