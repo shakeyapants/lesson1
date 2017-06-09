@@ -3,3 +3,5 @@
 __pycache__/*
 iso.py
 keys.py
+ttest.py
+venv/*

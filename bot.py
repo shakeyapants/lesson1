@@ -1,11 +1,17 @@
 import keys
 import ephem
 import time
-from iso import iso
 import logging
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import ReplyKeyboardMarkup
+from nums import nums
 
 
+# dictionary for separate calculation for each user
+user_texts = {}
+
+
+# First and last name of the user
 def get_user_name(update):
     user_name = update.message.chat.first_name + ' ' + update.message.chat.last_name
     return user_name
@@ -14,12 +20,22 @@ def get_user_name(update):
 def greet_user(bot, update):
     user_name = get_user_name(update)
     print('{} called /start'.format(user_name))
-    logging.info('{} called /start'.format(user_name))
-    lst_terms = []
-    for d_key in iso:
-        lst_terms.append(d_key)
-    all_terms = ', \n'.join(lst_terms)
-    update.message.reply_text(all_terms)
+    update.message.reply_text('Привет, {}'.format(user_name))
+
+
+def calculation(bot, update):
+    chat_id = update.message.chat_id
+    logging.info('{} called /start'.format(get_user_name(update)))
+
+    custom_keyboard = [['7', '8', '9', '+'],
+                       ['4', '5', '6', '-'],
+                       ['1', '2', '3', '*'],
+                       ['0', '/', '=']]
+    reply_markup = ReplyKeyboardMarkup(custom_keyboard)
+
+    bot.send_message(chat_id=chat_id,
+                     text="Please enter calculation",
+                     reply_markup=reply_markup)
 
 
 def planet_today(bot, update):
@@ -56,20 +72,70 @@ def planet_today(bot, update):
 def talk_to_me(bot, update):
     user_name = get_user_name(update)
     user_text = update.message.text.lower()
+    print(user_text)
+    list_user_text = user_texts.setdefault(update.message.chat_id, [])
+    list_user_text.append(user_text)
     print('{} wrote {}'.format(user_name, user_text))
-    possible_keys = []
-    for d_key in iso:
-        if user_text in d_key:
-            possible_keys.append(d_key)
 
-    if len(possible_keys) == 0:
-        reply = 'Такого определения нет, может опечатка?'
-    elif len(possible_keys) == 1:
-        reply = possible_keys[0] + ' – это ' + iso.get(possible_keys[0])
-    else:
-        possible_replies = ', '.join(possible_keys)
-        reply = 'Есть несколько определений, уточни запрос: ' + possible_replies
+    if list_user_text[-1] == '=':
+        user_text = ''.join(list_user_text)
+        del list_user_text[:]
+
+    if user_text.startswith('сколько будет'):
+        user_calc = user_text[13:]
+        user_calc_clear = user_calc.replace('?', '')
+        list_user_words = user_calc_clear.split()
+
+        for word in list_user_words:
+            if word not in nums:
+                list_user_words.remove(word)
+
+        for i in range(len(list_user_words)):
+            list_user_words[i] = nums.get(list_user_words[i])
+
+        user_text = ''.join(list_user_words) + '='
+
+        user_texts.pop(update.message.chat_id)
+    if user_text.endswith('='):
+        try:
+            if '-' in user_text:
+                num1 = int(user_text.split('-')[0])
+                part2 = user_text.split('-')[1]
+                num2 = int(part2.strip('='))
+                reply = num1 - num2
+            elif '+' in user_text:
+                num1 = int(user_text.split('+')[0])
+                part2 = user_text.split('+')[1]
+                num2 = int(part2.strip('='))
+                reply = num1 + num2
+            elif '/' in user_text:
+                num1 = int(user_text.split('/')[0])
+                part2 = user_text.split('/')[1]
+                num2 = int(part2.strip('='))
+                try:
+                    reply = num1 / num2
+                except ZeroDivisionError:
+                    reply = 'Division by zero hurts!'
+            elif '*' in user_text:
+                num1 = int(user_text.split('*')[0])
+                part2 = user_text.split('*')[1]
+                num2 = int(part2.strip('='))
+                reply = num1 * num2
+        except ValueError:
+            reply = 'Seems like no numbers to calculate'
     update.message.reply_text(reply)
+
+
+def wordcount(bot, update):
+    user_text = update.message.text
+    text = user_text[10:]
+    clear_text = text.strip()
+    if clear_text.startswith('"') and clear_text.endswith('"'):
+        words = clear_text.split()
+        update.message.reply_text(len(words))
+
+    else:
+        update.message.reply_text('The string must be in quotes')
 
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
@@ -83,7 +149,9 @@ def main():
 
     dp = updater.dispatcher
     dp.add_handler(CommandHandler('start', greet_user))
+    dp.add_handler(CommandHandler('calc', calculation))
     dp.add_handler(CommandHandler('planet', planet_today))
+    dp.add_handler(CommandHandler('wordcount', wordcount))
     dp.add_handler(MessageHandler(Filters.text, talk_to_me))
 
     updater.start_polling()
