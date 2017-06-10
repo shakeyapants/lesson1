@@ -13,8 +13,7 @@ user_texts = {}
 
 # First and last name of the user
 def get_user_name(update):
-    user_name = update.message.chat.first_name + ' ' + update.message.chat.last_name
-    return user_name
+    return '{} {}'.format(update.message.chat.first_name, update.message.chat.last_name)
 
 
 def greet_user(bot, update):
